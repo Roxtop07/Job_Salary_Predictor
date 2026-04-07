@@ -2,31 +2,54 @@ import streamlit as st
 import joblib
 import pandas as pd
 import numpy as np
+import os
 
 # --- 1. SET UP PAGE ---
 st.set_page_config(page_title="Salary Predictor", layout="centered")
 st.title("Salary Prediction App")
 
-# --- 2. LOAD MODELS ---
-@st.cache_resource
-def load_models():
-    return {
-        "Linear Regression": joblib.load('linear_regression_pipeline.pkl'),
-        "Decision Tree": joblib.load('decision_tree_pipeline.pkl'),
-        "Random Forest": joblib.load('random_forest_pipeline.pkl')
-    }
+# --- 2. DYNAMIC PATH RESOLUTION ---
+# This finds the folder where app.py is located, even on the Streamlit Cloud server
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-try:
-    models = load_models()
-except Exception as e:
-    st.error(f"Error loading models: {e}. Check if .pkl files are in the same folder.")
-    st.stop()
+@st.cache_resource
+def load_single_model(model_name):
+    """Loads only the selected model to save RAM."""
+    file_map = {
+        "Linear Regression": "linear_regression_pipeline.pkl",
+        "Decision Tree": "decision_tree_pipeline.pkl",
+        "Random Forest": "random_forest_pipeline.pkl"
+    }
+    
+    # Construct the full absolute path
+    file_path = os.path.join(BASE_DIR, file_map[model_name])
+    
+    if not os.path.exists(file_path):
+        # Debugging: Show what files ARE there if it fails
+        available_files = os.listdir(BASE_DIR)
+        raise FileNotFoundError(
+            f"Could not find '{file_map[model_name]}' in {BASE_DIR}. "
+            f"Files present in folder: {available_files}"
+        )
+        
+    return joblib.load(file_path)
 
 # Sidebar for model selection
-selected_model_name = st.sidebar.selectbox("Choose ML Model", list(models.keys()))
-model = models[selected_model_name]
+selected_model_name = st.sidebar.selectbox(
+    "Choose ML Model", 
+    ["Linear Regression", "Decision Tree", "Random Forest"]
+)
 
-# --- 3. UI INPUTS (EXACT OPTIONS FROM YOUR CSV) ---
+# Load ONLY the selected model
+try:
+    with st.spinner(f"Loading {selected_model_name}... (This may take a moment for large files)"):
+        model = load_single_model(selected_model_name)
+except Exception as e:
+    st.error(f"Error loading model: {e}")
+    st.info("Tip: Ensure your .pkl files were pushed using Git LFS and are in the same folder as app.py.")
+    st.stop()
+
+# --- 3. UI INPUTS ---
 st.subheader("Enter Job Details")
 col1, col2 = st.columns(2)
 
@@ -56,7 +79,6 @@ with col2:
 # --- 4. PREDICTION LOGIC ---
 if st.button("Predict Salary", use_container_width=True):
     
-    # Create the dictionary with EXACT column order as the CSV (X = df.drop('salary', axis=1))
     input_dict = {
         'job_title': job_title,
         'experience_years': int(experience_years),
@@ -69,20 +91,17 @@ if st.button("Predict Salary", use_container_width=True):
         'certifications': int(certifications)
     }
 
-    # Convert to DataFrame
     input_df = pd.DataFrame([input_dict])
 
     try:
-        # Step A: Get the LOG prediction from the model
         log_prediction = model.predict(input_df)
         
-        # Step B: CONVERT LOG BACK TO DOLLARS (Inverse of log1p)
+        # Convert log back to actual value
         actual_salary = np.expm1(log_prediction[0])
         
-        # Step C: Show result
         st.balloons()
         st.success(f"### Predicted Annual Salary: ${actual_salary:,.2f}")
-        st.info(f"Model: {selected_model_name} | Log-result: {log_prediction[0]:.4f}")
+        st.info(f"Model Used: {selected_model_name}")
         
     except Exception as e:
         st.error(f"Error during prediction: {e}")
