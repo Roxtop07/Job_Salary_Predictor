@@ -51,6 +51,19 @@ except Exception as e:
 
 # --- 3. UI INPUTS ---
 st.subheader("Enter Job Details")
+
+with st.expander("ℹ️ How does this predictor work?"):
+    st.write("""
+    This application predicts your estimated annual salary based on various professional metrics.
+    
+    **How to use:**
+    1. **Select a Machine Learning Model** from the sidebar (Linear Regression, Decision Tree, or Random Forest).
+    2. **Fill in your details** below, including your job title, experience, education, and industry.
+    3. Click **Predict Salary** to get an estimate.
+    
+    *Note: The predictions are based on historical data patterns and should be used as a reference rather than a definitive salary expectation.*
+    """)
+
 col1, col2 = st.columns(2)
 
 with col1:
