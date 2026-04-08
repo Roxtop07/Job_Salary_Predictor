@@ -8,6 +8,85 @@ import os
 st.set_page_config(page_title="Salary Predictor", layout="centered")
 st.title("Salary Prediction App")
 
+# --- SALARY ADJUSTMENT LOGIC ---
+# Define high-tech roles that typically pay more
+HIGH_TECH_ROLES = [
+    'Machine Learning Engineer', 'AI Engineer', 'Data Scientist', 
+    'Cloud Engineer', 'DevOps Engineer', 'Cybersecurity Analyst'
+]
+
+# Define high-paying locations
+HIGH_PAY_LOCATIONS = ['USA', 'Singapore', 'Australia', 'UK', 'Germany']
+LOW_PAY_LOCATIONS = ['India', 'Remote']
+
+def calculate_experience_level(experience_years, skills_count, education_level, certifications):
+    """Determine experience level based on multiple factors."""
+    score = 0
+    
+    # Experience contribution (max 40 points)
+    score += min(experience_years * 2, 40)
+    
+    # Skills contribution (max 20 points)
+    score += min(skills_count, 20)
+    
+    # Education contribution (max 20 points)
+    edu_scores = {'High School': 5, 'Diploma': 10, 'Bachelor': 12, 'Master': 16, 'PhD': 20}
+    score += edu_scores.get(education_level, 10)
+    
+    # Certifications contribution (max 10 points)
+    score += min(certifications * 2, 10)
+    
+    return score
+
+def apply_salary_adjustments(base_salary, input_data):
+    """
+    Apply realistic salary adjustments based on candidate profile.
+    Entry-level candidates with minimal qualifications get lower salaries.
+    """
+    adjusted_salary = base_salary
+    
+    # Calculate experience score
+    exp_score = calculate_experience_level(
+        input_data['experience_years'],
+        input_data['skills_count'],
+        input_data['education_level'],
+        input_data['certifications']
+    )
+    
+    # --- ENTRY-LEVEL PENALTY ---
+    # If very entry level (0 years, few skills), apply reduction
+    if input_data['experience_years'] == 0:
+        adjusted_salary *= 0.75  # 25% reduction for no experience
+        
+    if input_data['skills_count'] <= 2:
+        adjusted_salary *= 0.85  # 15% reduction for minimal skills
+    
+    # Entry-level score penalty (score < 25 is considered entry-level)
+    if exp_score < 25:
+        entry_penalty = 0.6 + (exp_score / 25) * 0.4  # Scale from 0.6 to 1.0
+        adjusted_salary *= entry_penalty
+    
+    # --- ROLE-BASED ADJUSTMENTS ---
+    # Non-tech roles typically pay less at entry level
+    if input_data['job_title'] not in HIGH_TECH_ROLES:
+        if input_data['experience_years'] <= 2:
+            adjusted_salary *= 0.90  # 10% less for non-tech entry roles
+    
+    # --- LOCATION ADJUSTMENTS ---
+    if input_data['location'] in LOW_PAY_LOCATIONS and input_data['experience_years'] <= 2:
+        adjusted_salary *= 0.85  # Additional 15% reduction for low-cost locations at entry level
+    
+    # --- COMPANY SIZE ADJUSTMENTS ---
+    if input_data['company_size'] == 'Startup' and input_data['experience_years'] <= 2:
+        adjusted_salary *= 0.90  # Startups pay less for entry level
+    
+    # --- MINIMUM SALARY FLOOR ---
+    # Ensure salary doesn't go below realistic minimum
+    min_salary = 25000  # $25K minimum
+    adjusted_salary = max(adjusted_salary, min_salary)
+    
+    return adjusted_salary, exp_score
+
 # --- 2. DYNAMIC PATH RESOLUTION ---
 # This finds the folder where app.py is located, even on the Streamlit Cloud server
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -110,11 +189,29 @@ if st.button("Predict Salary", use_container_width=True):
         log_prediction = model.predict(input_df)
         
         # Convert log back to actual value
-        actual_salary = np.expm1(log_prediction[0])
+        base_salary = np.expm1(log_prediction[0])
+        
+        # Apply realistic adjustments for entry-level candidates
+        actual_salary, exp_score = apply_salary_adjustments(base_salary, input_dict)
         
         st.balloons()
         st.success(f"### Predicted Annual Salary: ${actual_salary:,.2f}")
-        st.info(f"Model Used: {selected_model_name}")
+        
+        # Show experience level indicator
+        if exp_score < 25:
+            level = "🟢 Entry Level"
+        elif exp_score < 50:
+            level = "🟡 Mid Level"
+        elif exp_score < 75:
+            level = "🟠 Senior Level"
+        else:
+            level = "🔴 Expert Level"
+        
+        st.info(f"**Model:** {selected_model_name} | **Experience Level:** {level}")
+        
+        # Show adjustment note for entry-level
+        if exp_score < 25:
+            st.caption("💡 *Salary adjusted for entry-level profile based on experience, skills, and qualifications.*")
         
     except Exception as e:
         st.error(f"Error during prediction: {e}")
