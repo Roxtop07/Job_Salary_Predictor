@@ -19,6 +19,72 @@ HIGH_TECH_ROLES = [
 HIGH_PAY_LOCATIONS = ['USA', 'Singapore', 'Australia', 'UK', 'Germany']
 LOW_PAY_LOCATIONS = ['India', 'Remote']
 
+# --- CURRENCY AND COUNTRY-SPECIFIC SALARY DATA ---
+COUNTRY_CONFIG = {
+    'USA': {
+        'currency': 'USD', 'symbol': '$', 'rate': 1.0,
+        'salary_factor': 1.0,  # Base reference
+        'avg_tech_salary': 120000
+    },
+    'India': {
+        'currency': 'INR', 'symbol': '₹', 'rate': 83.5,
+        'salary_factor': 0.25,  # India salaries ~25% of US in USD terms
+        'avg_tech_salary': 1500000  # 15 LPA
+    },
+    'UK': {
+        'currency': 'GBP', 'symbol': '£', 'rate': 0.79,
+        'salary_factor': 0.85,
+        'avg_tech_salary': 65000
+    },
+    'Germany': {
+        'currency': 'EUR', 'symbol': '€', 'rate': 0.92,
+        'salary_factor': 0.80,
+        'avg_tech_salary': 70000
+    },
+    'Canada': {
+        'currency': 'CAD', 'symbol': 'C$', 'rate': 1.36,
+        'salary_factor': 0.75,
+        'avg_tech_salary': 95000
+    },
+    'Australia': {
+        'currency': 'AUD', 'symbol': 'A$', 'rate': 1.53,
+        'salary_factor': 0.90,
+        'avg_tech_salary': 130000
+    },
+    'Singapore': {
+        'currency': 'SGD', 'symbol': 'S$', 'rate': 1.34,
+        'salary_factor': 0.85,
+        'avg_tech_salary': 100000
+    },
+    'Netherlands': {
+        'currency': 'EUR', 'symbol': '€', 'rate': 0.92,
+        'salary_factor': 0.75,
+        'avg_tech_salary': 65000
+    },
+    'Sweden': {
+        'currency': 'SEK', 'symbol': 'kr', 'rate': 10.5,
+        'salary_factor': 0.70,
+        'avg_tech_salary': 650000
+    },
+    'Remote': {
+        'currency': 'USD', 'symbol': '$', 'rate': 1.0,
+        'salary_factor': 0.80,  # Remote typically pays slightly less
+        'avg_tech_salary': 100000
+    }
+}
+
+def convert_to_local_currency(usd_salary, location):
+    """Convert USD salary to local currency based on location."""
+    config = COUNTRY_CONFIG.get(location, COUNTRY_CONFIG['USA'])
+    local_salary = usd_salary * config['rate']
+    return local_salary, config['currency'], config['symbol']
+
+def adjust_salary_for_country(base_salary, location):
+    """Adjust salary based on country's market rates."""
+    config = COUNTRY_CONFIG.get(location, COUNTRY_CONFIG['USA'])
+    adjusted = base_salary * config['salary_factor']
+    return adjusted
+
 def calculate_experience_level(experience_years, skills_count, education_level, certifications):
     """Determine experience level based on multiple factors."""
     score = 0
@@ -72,17 +138,13 @@ def apply_salary_adjustments(base_salary, input_data):
         if input_data['experience_years'] <= 2:
             adjusted_salary *= 0.90  # 10% less for non-tech entry roles
     
-    # --- LOCATION ADJUSTMENTS ---
-    if input_data['location'] in LOW_PAY_LOCATIONS and input_data['experience_years'] <= 2:
-        adjusted_salary *= 0.85  # Additional 15% reduction for low-cost locations at entry level
-    
     # --- COMPANY SIZE ADJUSTMENTS ---
     if input_data['company_size'] == 'Startup' and input_data['experience_years'] <= 2:
         adjusted_salary *= 0.90  # Startups pay less for entry level
     
-    # --- MINIMUM SALARY FLOOR ---
+    # --- MINIMUM SALARY FLOOR (in USD) ---
     # Ensure salary doesn't go below realistic minimum
-    min_salary = 25000  # $25K minimum
+    min_salary = 25000  # $25K USD minimum (will be converted later)
     adjusted_salary = max(adjusted_salary, min_salary)
     
     return adjusted_salary, exp_score
@@ -188,14 +250,35 @@ if st.button("Predict Salary", use_container_width=True):
     try:
         log_prediction = model.predict(input_df)
         
-        # Convert log back to actual value
-        base_salary = np.expm1(log_prediction[0])
+        # Convert log back to actual value (USD base)
+        base_salary_usd = np.expm1(log_prediction[0])
         
         # Apply realistic adjustments for entry-level candidates
-        actual_salary, exp_score = apply_salary_adjustments(base_salary, input_dict)
+        adjusted_salary_usd, exp_score = apply_salary_adjustments(base_salary_usd, input_dict)
+        
+        # Apply country-specific salary adjustment
+        country_adjusted_usd = adjust_salary_for_country(adjusted_salary_usd, location)
+        
+        # Convert to local currency
+        local_salary, currency_code, currency_symbol = convert_to_local_currency(country_adjusted_usd, location)
         
         st.balloons()
-        st.success(f"### Predicted Annual Salary: ${actual_salary:,.2f}")
+        
+        # Display salary in local currency
+        if location == 'India':
+            # Show in Lakhs format for India
+            lakhs = local_salary / 100000
+            if lakhs >= 1:
+                st.success(f"### Predicted Annual Salary: ₹{lakhs:,.2f} Lakhs")
+                st.caption(f"(₹{local_salary:,.0f} per year)")
+            else:
+                st.success(f"### Predicted Annual Salary: ₹{local_salary:,.0f}")
+        else:
+            st.success(f"### Predicted Annual Salary: {currency_symbol}{local_salary:,.2f} {currency_code}")
+        
+        # Show USD equivalent for non-USD countries
+        if currency_code != 'USD':
+            st.caption(f"💵 *Equivalent: ${country_adjusted_usd:,.2f} USD*")
         
         # Show experience level indicator
         if exp_score < 25:
@@ -207,11 +290,16 @@ if st.button("Predict Salary", use_container_width=True):
         else:
             level = "🔴 Expert Level"
         
-        st.info(f"**Model:** {selected_model_name} | **Experience Level:** {level}")
+        st.info(f"**Model:** {selected_model_name} | **Experience Level:** {level} | **Location:** {location}")
         
         # Show adjustment note for entry-level
         if exp_score < 25:
             st.caption("💡 *Salary adjusted for entry-level profile based on experience, skills, and qualifications.*")
+        
+        # Show country salary context
+        country_config = COUNTRY_CONFIG.get(location, COUNTRY_CONFIG['USA'])
+        avg_salary = country_config['avg_tech_salary']
+        st.caption(f"📊 *Average tech salary in {location}: {currency_symbol}{avg_salary:,} {currency_code}*")
         
     except Exception as e:
         st.error(f"Error during prediction: {e}")
