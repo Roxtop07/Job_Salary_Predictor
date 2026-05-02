@@ -173,7 +173,7 @@ def run_full_workflow(sample_size: int, random_state: int):
         "Lasso Regression": Lasso(alpha=0.0005, max_iter=5000),
         "Decision Tree": DecisionTreeRegressor(random_state=random_state, max_depth=16),
         "Random Forest": RandomForestRegressor(
-            random_state=random_state, n_estimators=150, max_depth=18, n_jobs=1
+            random_state=random_state, n_estimators=50, max_depth=18, n_jobs=1
         ),
     }
 
@@ -389,7 +389,7 @@ st.caption(
 with st.sidebar:
     st.header("Workflow Controls")
     raw_data = load_dataset()
-    default_sample = min(40000, len(raw_data))
+    default_sample = min(10000, len(raw_data))
     sample_size = st.slider(
         "Training sample size",
         min_value=10000,
