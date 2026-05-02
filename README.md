@@ -65,7 +65,6 @@ jupyter notebook job_salary_prediction_complete.ipynb
 ```bash
 # 1. Install dependencies
 pip install -r requirements.txt
-pip install streamlit
 
 # 2. Launch the app
 streamlit run salary_prediction.py
@@ -79,8 +78,9 @@ streamlit run salary_prediction.py
 Job_Salary_Predictor/
 ├── job_salary_prediction_complete.ipynb  # Complete ML notebook (all 4 modules)
 ├── job_salary_prediction_dataset.csv     # Dataset (250K records)
-├── salary_prediction.py                  # Streamlit web app for predictions
+├── salary_prediction.py                  # Full end-to-end Streamlit ML workflow app
 ├── job_salary_prediction_documentation.md # Code documentation
+├── explaination.md                       # Viva-ready child-friendly project explanation
 ├── requirements.txt                      # Python dependencies
 ├── README.md                             # This file
 ├── plots/                                # Auto-generated visualizations
