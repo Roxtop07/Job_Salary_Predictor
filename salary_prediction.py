@@ -393,7 +393,7 @@ with st.sidebar:
     sample_size = st.slider(
         "Training sample size",
         min_value=10000,
-        max_value=len(raw_data),
+        max_value=min(50000, len(raw_data)),
         value=default_sample,
         step=10000,
     )
