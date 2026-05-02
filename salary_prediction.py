@@ -173,7 +173,7 @@ def run_full_workflow(sample_size: int, random_state: int):
         "Lasso Regression": Lasso(alpha=0.0005, max_iter=5000),
         "Decision Tree": DecisionTreeRegressor(random_state=random_state, max_depth=16),
         "Random Forest": RandomForestRegressor(
-            random_state=random_state, n_estimators=150, max_depth=18, n_jobs=-1
+            random_state=random_state, n_estimators=150, max_depth=18, n_jobs=1
         ),
     }
 
@@ -226,7 +226,7 @@ def run_full_workflow(sample_size: int, random_state: int):
         param_grid=tuning_grid,
         scoring="r2",
         cv=3,
-        n_jobs=-1,
+        n_jobs=1,
     )
     dt_tuner.fit(X_train, y_train)
 
