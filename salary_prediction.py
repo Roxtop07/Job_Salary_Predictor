@@ -381,7 +381,7 @@ def prediction_scatter(pred_df: pd.DataFrame, title: str):
     return fig
 
 
-st.title("Complete End-to-End ML Application")
+st.title("Job Salary Predictor")
 st.caption(
     "This Streamlit app shows the full workflow: Data Prep → Baseline Model → Optimization & Unsupervised Learning → Advanced Models → Final Prediction System."
 )

@@ -1,6 +1,5 @@
 [client]
 showErrorDetails = true
-maxMessageSize = 200
 
 [server]
 maxUploadSize = 200

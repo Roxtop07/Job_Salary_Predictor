@@ -23,7 +23,7 @@ FEATURES = [
 ]
 
 def main():
-    st.title("💼 Job Salary Predictor")
+    st.title("Job Salary Predictor")
     st.markdown("An end-to-end **Machine Learning application** demonstrating data prep, baseline models, optimization, and advanced ML techniques.")
     
     with st.spinner("⏳ Loading dataset..."):
