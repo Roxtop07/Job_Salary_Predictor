@@ -88,8 +88,8 @@ def main():
         
         with st.spinner("Calculating..."):
             try:
-                # Predict
-                prediction = model.predict(input_data)[0]
+                pred_log = model.predict(input_data)[0]
+                prediction = np.expm1(pred_log)
                 
                 st.success(f"### Predicted Annual Salary: **${prediction:,.0f}**")
                 
