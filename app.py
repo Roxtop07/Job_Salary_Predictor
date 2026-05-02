@@ -42,7 +42,7 @@ def load_model():
         return None
 
 def main():
-    st.title("Job Salary Predictor 💰")
+    st.title("Job Salary Predictor")
     st.markdown("Enter your professional details below to predict your annual salary using a trained Random Forest model.")
     
     options = get_options()
