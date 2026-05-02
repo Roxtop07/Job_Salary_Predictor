@@ -75,9 +75,8 @@ def clean_dataset(df: pd.DataFrame):
         clean_df[col] = clean_df[col].fillna(mode_value)
 
     salary_low = clean_df["salary"].quantile(0.01)
-    salary_high = clean_df["salary"].quantile(0.95)
-    clean_df["salary_capped"] = clean_df["salary"].clip(lower=salary_low, upper=salary_high)
-    clean_df["salary_log"] = np.log1p(clean_df["salary_capped"])
+    salary_high = clean_df["salary"].quantile(0.99)
+    clean_df["salary_log"] = np.log1p(clean_df["salary"])
 
     missing_after = clean_df.isna().sum()
 
@@ -454,7 +453,7 @@ with tab1:
     )
     st.dataframe(missing_table, use_container_width=True)
     st.caption(
-        f"Winsorization applied on salary: lower cap = {preprocess_info['salary_low']:.0f}, upper cap = {preprocess_info['salary_high']:.0f}."
+        f"Salary distribution reference (no hard cap): P1 = {preprocess_info['salary_low']:.0f}, P99 = {preprocess_info['salary_high']:.0f}."
     )
 
     st.markdown("### Cleaned Dataset Sample")

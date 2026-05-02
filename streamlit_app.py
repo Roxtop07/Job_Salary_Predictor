@@ -65,9 +65,9 @@ def build_preprocessor():
         ("nominal_cat", OneHotEncoder(drop="first", sparse_output=False, handle_unknown="ignore"), 
          ["job_title", "industry", "location"]),
         ("ordinal_cat", OrdinalEncoder(categories=[
-            sorted(["High School", "Bachelor's", "Master's", "PhD"]),
-            sorted(["Startup", "Small", "Medium", "Large"]),
-            ["No", "Yes"]
+            ["High School", "Diploma", "Bachelor", "Master", "PhD"],
+            ["Startup", "Small", "Medium", "Large", "Enterprise"],
+            ["No", "Hybrid", "Yes"]
         ], handle_unknown="use_encoded_value", unknown_value=-1),
          ["education_level", "company_size", "remote_work"]),
         ("numeric", StandardScaler(), ["experience_years", "skills_count", "certifications"]),
@@ -78,10 +78,7 @@ def prepare_data(df: pd.DataFrame):
     """Prepare X, y, and train/test split"""
     X = df[FEATURE_COLUMNS].copy()
     y = np.log1p(df[TARGET_COLUMN].copy())
-    
-    y_min, y_max = np.percentile(y, [1, 95])
-    y = np.clip(y, y_min, y_max)
-    
+
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
     return X_train, X_test, y_train, y_test
 
@@ -317,20 +314,29 @@ def main():
             models, _ = train_models(X_train, X_test, y_train, y_test)
         
         st.write("**Enter candidate details to predict salary:**")
+
+        category_options = {
+            "job_title": sorted(clean_df["job_title"].dropna().unique().tolist()),
+            "education_level": sorted(clean_df["education_level"].dropna().unique().tolist()),
+            "industry": sorted(clean_df["industry"].dropna().unique().tolist()),
+            "company_size": sorted(clean_df["company_size"].dropna().unique().tolist()),
+            "location": sorted(clean_df["location"].dropna().unique().tolist()),
+            "remote_work": sorted(clean_df["remote_work"].dropna().unique().tolist()),
+        }
         
         col1, col2 = st.columns(2)
         with col1:
-            job_title = st.selectbox("Job Title", clean_df["job_title"].unique()[:10])
+            job_title = st.selectbox("Job Title", category_options["job_title"])
             experience = st.slider("Experience (years)", 0, 30, 5)
-            education = st.selectbox("Education Level", ["High School", "Bachelor's", "Master's", "PhD"])
+            education = st.selectbox("Education Level", category_options["education_level"])
         
         with col2:
             skills = st.slider("Skills Count", 0, 20, 5)
-            industry = st.selectbox("Industry", clean_df["industry"].unique()[:10])
-            company_size = st.selectbox("Company Size", ["Startup", "Small", "Medium", "Large"])
+            industry = st.selectbox("Industry", category_options["industry"])
+            company_size = st.selectbox("Company Size", category_options["company_size"])
         
-        location = st.selectbox("Location", clean_df["location"].unique()[:5])
-        remote = st.selectbox("Remote Work", ["No", "Yes"])
+        location = st.selectbox("Location", category_options["location"])
+        remote = st.selectbox("Remote Work", category_options["remote_work"])
         certs = st.slider("Certifications", 0, 10, 2)
         
         if st.button("Predict Salary"):
